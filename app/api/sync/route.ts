@@ -7,32 +7,42 @@ const supabase = createClient(
 );
 
 export async function GET() {
-  const FACEIT_API_KEY = process.env.FACEIT_API_KEY;
+  const apiKey = process.env.FACEIT_API_KEY;
 
-  if (!FACEIT_API_KEY) {
-    return NextResponse.json({ error: "Variabila FACEIT_API_KEY lipsește din Vercel" }, { status: 500 });
-  }
-
-  const faceitResponse = await fetch(
-    'https://open.faceit.com/data/v4/rankings/games/cs2/regions/EU/countries/ro?limit=50',
-    {
-      headers: {
-        'Authorization': `Bearer ${FACEIT_API_KEY}`,
-        'Content-Type': 'application/json'
-      }
-    }
-  );
-
-  // DACĂ APARE O EROARE, VREM SĂ VEDEM EXACT CE ZICE FACEIT
-  if (!faceitResponse.ok) {
-    const errorBody = await faceitResponse.json().catch(() => ({ message: "Nu s-a putut citi corpul erorii" }));
+  // Verificăm dacă Vercel vede cheia
+  if (!apiKey) {
     return NextResponse.json({ 
       success: false, 
-      statusCode: faceitResponse.status, 
-      faceitMessage: errorBody 
-    }, { status: faceitResponse.status });
+      error: "Vercel nu citește cheia. Verifică Environment Variables." 
+    }, { status: 500 });
   }
 
-  const data = await faceitResponse.json();
-  return NextResponse.json({ success: true, playersFound: data.items.length });
+  try {
+    const res = await fetch(
+      'https://open.faceit.com/data/v4/rankings/games/cs2/regions/EU/countries/ro?limit=50',
+      {
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json'
+        },
+        cache: 'no-store' // Forțăm o cerere nouă
+      }
+    );
+
+    if (!res.ok) {
+      // Aici e cheia: cerem detaliile erorii direct de la Faceit
+      const errorText = await res.text();
+      return NextResponse.json({ 
+        success: false, 
+        status: res.status, // Ne va da 401, 403, etc.
+        faceit_error: errorText 
+      }, { status: res.status });
+    }
+
+    const data = await res.json();
+    return NextResponse.json({ success: true, count: data.items.length });
+
+  } catch (err: any) {
+    return NextResponse.json({ success: false, crash: err.message }, { status: 500 });
+  }
 }
