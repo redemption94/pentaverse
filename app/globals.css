@@ -3,25 +3,34 @@
 @tailwind utilities;
 
 :root {
-  --penta-gold: #DE9B35;
-  --penta-yellow: #F6C85E;
+  --esl-yellow: #ffeb00;
+  --esl-black: #111111;
+  --esl-dark-gray: #1a1a1a;
+  --esl-border: #2a2a2a;
 }
 
 body {
-  /* Gradient radial pentru profunzime tip CS2 */
-  background: radial-gradient(circle at 50% 0%, #1a1a1a 0%, #000000 100%);
+  background-color: var(--esl-black);
   color: #ffffff;
-  min-height: 100vh;
   font-family: 'Inter', sans-serif;
+  letter-spacing: -0.02em;
 }
 
-/* Efect de strălucire pentru elementele aurii */
-.gold-glow {
-  text-shadow: 0 0 15px rgba(222, 155, 53, 0.5);
+/* Efectul de tăietură diagonală (Slash) specific ESL */
+.esl-slash {
+  clip-path: polygon(10% 0, 100% 0, 90% 100%, 0 100%);
 }
 
-.glass-card {
-  background: rgba(10, 10, 10, 0.7);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+.esl-card {
+  background: var(--esl-dark-gray);
+  border: 1px solid var(--esl-border);
+  position: relative;
+}
+
+.esl-card::before {
+  content: "";
+  position: absolute;
+  top: -1px; left: -1px;
+  width: 4px; height: 20px;
+  background: var(--esl-yellow);
 }
