@@ -1,3 +1,17 @@
+'use client'; 
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  Bell, 
+  Trophy, 
+  Zap, 
+  ChevronRight, 
+  BarChart3, 
+  Users, 
+  Target, 
+  TrendingUp,   // Adăugat acum
+  TrendingDown  // Adăugat acum
+} from 'lucide-react';
+
 'use client'; // Activăm animațiile
 import { motion, AnimatePresence } from 'framer-motion';
 import { Bell, Trophy, Zap, ChevronRight, BarChart3, Users, Target } from 'lucide-react';
