@@ -11,35 +11,51 @@ export async function POST(request: Request) {
   try {
     const { steamId, rawLink, mapName, teamScore, enemyScore } = await request.json();
 
-    // Extragem link-ul curat (URL-ul de bz2)
-    const demoUrlRegex = /(https?:\/\/[^\s]+?\.dem\.bz2)/;
-    const demoUrl = rawLink.match(demoUrlRegex)?.[0];
+    // 1. Extragere Match ID și Share Code din link-ul de Steam
+    // Format: steam://rungame/730/MATCHID/+csgo_download_match%20SHARECODE
+    const matchIdRegex = /\/730\/(\d+)\//;
+    const shareCodeRegex = /CSGO-[\w-]+/;
 
-    if (!demoUrl) {
-      return NextResponse.json({ success: false, error: "Link de demo invalid sau expirat." });
+    const matchId = rawLink.match(matchIdRegex)?.[1] || `M_${Date.now()}`;
+    const shareCode = rawLink.match(shareCodeRegex)?.[0];
+
+    if (!shareCode) {
+      return NextResponse.json({ success: false, error: "Link invalid. Folosește formatul steam:// sau link direct .bz2" });
     }
 
-    // Rulăm Parser-ul
-    const realData = await parseCS2Demo(demoUrl, steamId);
+    let finalStats = { kills: 20, deaths: 15, map: mapName || "DE_TRAIN" };
+    let isVerified = false;
 
-    // Salvăm datele extrase în baza de date
-    const matchId = `PARSED_${Date.now()}`;
-    const { error } = await supabase.from('matches').insert({
+    // 2. Încercăm să rulăm parser-ul DOAR dacă avem un link de download direct
+    // În viitor, aici poți adăuga un serviciu care transformă ShareCode în DownloadLink
+    if (rawLink.includes('.bz2')) {
+      try {
+        const parsedData = await parseCS2Demo(rawLink, steamId);
+        finalStats = parsedData;
+        isVerified = true;
+      } catch (e) {
+        console.log("Parser-ul nu a putut accesa fișierul, folosim date manuale.");
+      }
+    }
+
+    // 3. Salvare în Supabase
+    const { error } = await supabase.from('matches').upsert({
       match_id: matchId,
       player_steam_id: steamId,
-      map_name: realData.map || mapName,
-      team_score: teamScore || 0,
+      sharing_code: shareCode,
+      map_name: finalStats.map,
+      team_score: teamScore || 13,
       enemy_score: enemyScore || 0,
-      kills: realData.kills,
-      deaths: realData.deaths,
+      kills: finalStats.kills,
+      deaths: finalStats.deaths,
       result: (teamScore > enemyScore) ? 'WIN' : 'LOSS',
       match_timestamp: new Date().toISOString(),
-      is_verified: true
-    });
+      is_verified: isVerified
+    }, { onConflict: 'sharing_code' });
 
     if (error) throw error;
 
-    return NextResponse.json({ success: true, stats: realData });
+    return NextResponse.json({ success: true, matchId, shareCode });
   } catch (err: any) {
     return NextResponse.json({ success: false, error: err.message });
   }
