@@ -4,8 +4,6 @@ import {
   Target, Zap, Clock, BarChart3, Heart, 
   ShieldCheck, Trophy, Activity 
 } from 'lucide-react';
-
-// Folosim cale relativă pentru a evita erorile de alias în Vercel
 import MatchHistoryList from '../../../components/MatchHistoryList';
 
 export const dynamic = 'force-dynamic';
@@ -19,7 +17,7 @@ export default async function ProfilePage(props: { params: Promise<{ id: string 
   const params = await props.params;
   const steamId = params.id;
 
-  // Interogare bază de date
+  // Interogăm Jucătorul + Cele mai recente 10 meciuri (JOIN cu jucătorii din meci)
   const { data: player, error: playerError } = await supabase
     .from('players')
     .select(`
@@ -34,81 +32,48 @@ export default async function ProfilePage(props: { params: Promise<{ id: string 
 
   if (playerError || !player) return notFound();
 
-  const sortedMatches = player.matches?.sort((a: any, b: any) => 
-    new Date(b.match_timestamp).getTime() - new Date(a.match_timestamp).getTime()
-  ) || [];
+  // Sortăm meciurile astfel încât cel mai recent să fie primul (DESC)
+  // Și limităm la ultimele 10
+  const sortedMatches = (player.matches || [])
+    .sort((a: any, b: any) => 
+      new Date(b.match_timestamp).getTime() - new Date(a.match_timestamp).getTime()
+    )
+    .slice(0, 10);
 
   return (
-    <div className="min-h-screen bg-[#050505] text-white selection:bg-[#ffeb00] selection:text-black font-sans">
-      
-      {/* HEADER: PLAYER IDENTITY */}
-      <div className="h-[400px] bg-black border-b border-white/5 relative flex items-end pb-16 px-6 md:px-12">
-        <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]" />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-transparent to-transparent" />
-        
+    <div className="min-h-screen bg-[#050505] text-white selection:bg-[#ffeb00] selection:text-black">
+      <header className="h-[400px] bg-black border-b border-white/5 relative flex items-end pb-16 px-12">
         <div className="max-w-7xl mx-auto w-full flex flex-col md:flex-row items-end gap-10 relative z-10">
-          <div className="w-44 h-44 border-4 border-[#ffeb00] bg-black shadow-[0_0_50px_rgba(255,235,0,0.15)]">
-            <img src={player.avatar_url} className="w-full h-full object-cover grayscale" alt={player.nickname} />
+          <div className="w-44 h-44 border-4 border-[#ffeb00] bg-black">
+            <img src={player.avatar_url} className="w-full h-full object-cover grayscale" alt="" />
           </div>
-          <div className="flex-1 text-left">
-            <div className="flex items-center gap-3 mb-4">
-              <span className="bg-[#ffeb00] text-black text-[10px] font-[1000] px-3 py-1 uppercase italic skew-x-[-12deg]">
-                Active Combat Asset
-              </span>
-              <span className="text-gray-600 text-[10px] font-black uppercase tracking-[0.3em]">ID: {player.steam_id}</span>
-            </div>
-            <h1 className="text-7xl md:text-8xl font-[1000] uppercase italic tracking-tighter leading-none mb-4">
-              {player.nickname}
-            </h1>
-            <div className="flex gap-8 text-gray-500 text-[10px] font-bold uppercase tracking-widest">
-               <span className="flex items-center gap-2"><Clock size={14} className="text-[#ffeb00]"/> {player.playtime_hours}h Total Grind</span>
-               <span className="flex items-center gap-2 text-white"><Trophy size={14} className="text-[#ffeb00]"/> Scout Score: {player.penta_scout_score}</span>
+          <div className="flex-1">
+            <h1 className="text-7xl font-[1000] uppercase italic tracking-tighter leading-none mb-4">{player.nickname}</h1>
+            <div className="flex gap-8 text-gray-500 text-[10px] font-black uppercase tracking-widest">
+               <span className="flex items-center gap-2 text-white"><Trophy size={14} className="text-[#ffeb00]"/> Scout Rating: {player.penta_scout_score}</span>
+               <span className="flex items-center gap-2"><Clock size={14}/> Dossier: {player.steam_id}</span>
             </div>
           </div>
         </div>
-      </div>
+      </header>
 
-      <main className="max-w-7xl mx-auto px-6 md:px-12 py-20 grid lg:grid-cols-3 gap-16">
-        
-        {/* LEFT COLUMN: MATCH ARCHIVE */}
+      <main className="max-w-7xl mx-auto px-12 py-20 grid lg:grid-cols-3 gap-16">
         <div className="lg:col-span-2 space-y-12">
           <section>
              <h3 className="text-xs font-black uppercase tracking-[0.5em] text-gray-600 mb-10 flex items-center gap-3">
-                <Activity size={16} className="text-[#ffeb00]" /> Mission Intelligence Archive
+                <Activity size={16} className="text-[#ffeb00]" /> Recent Mission Intelligence (Last 10 Matches)
              </h3>
-             
-             {/* Componenta de Client pentru interactivitate */}
              <MatchHistoryList initialMatches={sortedMatches} playerSteamId={steamId} />
-          </section>
-
-          <section className="bg-[#0a0a0a] p-10 border border-white/5 relative overflow-hidden">
-             <div className="absolute top-0 right-0 p-8 opacity-5"><BarChart3 size={120} /></div>
-             <h3 className="text-xs font-black uppercase tracking-[0.4em] text-gray-600 mb-6">Career Dossier</h3>
-             <p className="text-2xl font-medium italic text-gray-400 leading-relaxed border-l-4 border-[#ffeb00] pl-10">
-               {player.bio || "Inteligența Steam activă. Monitorizare combat în timp real."}
-             </p>
           </section>
         </div>
 
-        {/* RIGHT COLUMN */}
         <aside className="space-y-8">
-           <div className="bg-[#ffeb00] p-10 text-black shadow-[0_0_60px_rgba(255,235,0,0.1)]">
+           <div className="bg-[#ffeb00] p-10 text-black">
               <Heart size={36} className="mb-8 fill-black" />
               <h3 className="text-3xl font-[1000] uppercase italic leading-none mb-6">Sponsor Career</h3>
-              <button className="w-full bg-black text-[#ffeb00] py-5 font-[1000] uppercase italic text-xs hover:bg-white transition-all">
-                Initialize Support
-              </button>
-           </div>
-           
-           <div className="bg-[#0a0a0a] border border-white/5 p-8">
-              <h4 className="text-[10px] font-black text-gray-600 uppercase tracking-[0.3em] mb-4">Integrity Status</h4>
-              <div className="flex items-center gap-3 text-green-500 bg-green-500/5 p-4 border border-green-500/20">
-                 <ShieldCheck size={20} />
-                 <span className="text-[10px] font-[1000] uppercase">VAC Secure</span>
-              </div>
+              <button className="w-full bg-black text-[#ffeb00] py-5 font-black uppercase italic text-xs hover:bg-white transition-all">Support Talent</button>
            </div>
         </aside>
-
       </main>
     </div>
   );
