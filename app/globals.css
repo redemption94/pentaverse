@@ -2,7 +2,26 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --penta-gold: #DE9B35;
+  --penta-yellow: #F6C85E;
+}
+
 body {
-  background-color: #000000;
-  color: white;
+  /* Gradient radial pentru profunzime tip CS2 */
+  background: radial-gradient(circle at 50% 0%, #1a1a1a 0%, #000000 100%);
+  color: #ffffff;
+  min-height: 100vh;
+  font-family: 'Inter', sans-serif;
+}
+
+/* Efect de strălucire pentru elementele aurii */
+.gold-glow {
+  text-shadow: 0 0 15px rgba(222, 155, 53, 0.5);
+}
+
+.glass-card {
+  background: rgba(10, 10, 10, 0.7);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
