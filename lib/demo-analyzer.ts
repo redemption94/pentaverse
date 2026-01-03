@@ -2,31 +2,35 @@ import { DemoFile } from "demofile";
 import axios from "axios";
 const bz2 = require("unbzip2-stream");
 
-export async function parseCS2Demo(url: string, targetSteamId: string) {
+/**
+ * Parser pentru demo-uri CS2
+ * Extrage harta, kills și deaths dintr-un link de download Valve
+ */
+export async function parseCS2Demo(url: string, targetSteamId: string): Promise<any> {
   return new Promise(async (resolve, reject) => {
     try {
-      // 1. Descărcăm demo-ul (stream)
+      // 1. Descărcăm demo-ul ca stream
       const response = await axios({
         method: "get",
         url: url,
         responseType: "stream",
+        timeout: 30000 // Timeout după 30 secunde
       });
 
       const demoFile = new DemoFile();
-      let stats = {
+      const stats = {
         kills: 0,
         deaths: 0,
-        mvps: 0,
-        map: "",
+        map: "Unknown",
         score: { team: 0, enemy: 0 }
       };
 
-      // 2. Extragem datele din header
+      // 2. Citim Header-ul (Harta)
       demoFile.on("start", () => {
         stats.map = demoFile.header.mapName;
       });
 
-      // 3. Numărăm kill-urile pentru SteamID-ul țintă
+      // 3. Monitorizăm evenimentele de kill
       demoFile.gameEvents.on("player_death", (e) => {
         const victim = demoFile.entities.getByUserId(e.userid);
         const attacker = demoFile.entities.getByUserId(e.attacker);
@@ -39,21 +43,20 @@ export async function parseCS2Demo(url: string, targetSteamId: string) {
         }
       });
 
-      // 4. Extragem scorul final
-      demoFile.gameEvents.on("round_end", (e) => {
-        // Actualizăm scorul la fiecare rundă
-        // Aceasta este o variantă simplificată
-      });
-
+      // 4. Finalizare și returnare date
       demoFile.on("end", () => {
-        resolve(stats);
+        if (demoFile.error) {
+          reject("Eroare la parsarea fișierului.");
+        } else {
+          resolve(stats);
+        }
       });
 
-      // Pornim procesarea stream-ului decompresat
+      // Procesăm stream-ul decomprimat prin BZ2
       response.data.pipe(bz2()).pipe(demoFile);
 
-    } catch (error) {
-      reject(error);
+    } catch (error: any) {
+      reject(`Download Error: ${error.message}`);
     }
   });
 }
