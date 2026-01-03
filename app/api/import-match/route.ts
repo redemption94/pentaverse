@@ -11,52 +11,68 @@ export async function POST(request: Request) {
   try {
     const { steamId, rawLink, mapName, teamScore, enemyScore } = await request.json();
 
-    // 1. Extragere Match ID și Share Code din link-ul de Steam
-    // Format: steam://rungame/730/MATCHID/+csgo_download_match%20SHARECODE
-    const matchIdRegex = /\/730\/(\d+)\//;
-    const shareCodeRegex = /CSGO-[\w-]+/;
+    // 1. Extragem Match ID și Share Code din orice tip de link
+    const matchIdMatch = rawLink.match(/\/730\/(\d+)\//);
+    const shareCodeMatch = rawLink.match(/CSGO-[\w-]+/);
 
-    const matchId = rawLink.match(matchIdRegex)?.[1] || `M_${Date.now()}`;
-    const shareCode = rawLink.match(shareCodeRegex)?.[0];
+    const matchId = matchIdMatch ? matchIdMatch[1] : `M_${Date.now()}`;
+    const shareCode = shareCodeMatch ? shareCodeMatch[0] : null;
 
     if (!shareCode) {
-      return NextResponse.json({ success: false, error: "Link invalid. Folosește formatul steam:// sau link direct .bz2" });
+      return NextResponse.json({ success: false, error: "Nu am găsit codul CSGO- în link." });
     }
 
-    let finalStats = { kills: 20, deaths: 15, map: mapName || "DE_TRAIN" };
+    // Valori default (cele introduse de tine în UI)
+    let finalKills = 0;
+    let finalDeaths = 0;
+    let finalMap = mapName || "DE_TRAIN";
     let isVerified = false;
 
-    // 2. Încercăm să rulăm parser-ul DOAR dacă avem un link de download direct
-    // În viitor, aici poți adăuga un serviciu care transformă ShareCode în DownloadLink
+    // 2. Încercăm parserul DOAR dacă e link de download. Dacă dă eroare, mergem mai departe.
     if (rawLink.includes('.bz2')) {
       try {
         const parsedData = await parseCS2Demo(rawLink, steamId);
-        finalStats = parsedData;
+        finalKills = parsedData.kills;
+        finalDeaths = parsedData.deaths;
+        finalMap = parsedData.map;
         isVerified = true;
       } catch (e) {
-        console.log("Parser-ul nu a putut accesa fișierul, folosim date manuale.");
+        console.error("Parser failed, switching to manual mode");
       }
     }
 
-    // 3. Salvare în Supabase
-    const { error } = await supabase.from('matches').upsert({
+    // 3. Salvare (UPSERT) în tabelul 'matches'
+    const { data: match, error: matchError } = await supabase.from('matches').upsert({
       match_id: matchId,
       player_steam_id: steamId,
       sharing_code: shareCode,
-      map_name: finalStats.map,
+      map_name: finalMap,
       team_score: teamScore || 13,
       enemy_score: enemyScore || 0,
-      kills: finalStats.kills,
-      deaths: finalStats.deaths,
-      result: (teamScore > enemyScore) ? 'WIN' : 'LOSS',
+      kills: finalKills,
+      deaths: finalDeaths,
+      result: (teamScore >= enemyScore) ? 'WIN' : 'LOSS',
       match_timestamp: new Date().toISOString(),
       is_verified: isVerified
-    }, { onConflict: 'sharing_code' });
+    }, { onConflict: 'sharing_code' }).select().single();
 
-    if (error) throw error;
+    if (matchError) throw matchError;
 
-    return NextResponse.json({ success: true, matchId, shareCode });
+    // 4. Inserăm și un lineup de bază ca să nu apară lista goală la click pe meci
+    await supabase.from('match_players').upsert([
+      { 
+        match_id: matchId, 
+        steam_id: steamId, 
+        nickname: "You", 
+        team: 'SIDE_A', 
+        kills: finalKills, 
+        deaths: finalDeaths 
+      }
+    ]);
+
+    return NextResponse.json({ success: true, matchId });
   } catch (err: any) {
+    console.error(err);
     return NextResponse.json({ success: false, error: err.message });
   }
 }
