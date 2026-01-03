@@ -1,167 +1,114 @@
 import { createClient } from '@supabase/supabase-js';
-import { 
-  Bell, 
-  Award, 
-  UserCheck, 
-  TrendingUp, 
-  TrendingDown, 
-  Target, 
-  Zap, 
-  Trophy,
-  ShieldCheck
-} from 'lucide-react';
+import { Bell, UserCheck, TrendingUp, TrendingDown, ChevronRight, Share2, Info } from 'lucide-react';
 
-// Inițializare Supabase
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
 
 export default async function HomePage() {
-  // 1. Preluăm jucătorii din Supabase ordonați după Elo
-  const { data: players } = await supabase
-    .from('players')
-    .select('*')
-    .order('current_elo', { ascending: false });
-
-  // 2. Preluăm istoricul de ieri pentru a calcula diferența (24h)
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
-  const yesterdayStr = yesterday.toISOString().split('T')[0];
-
-  const { data: history } = await supabase
-    .from('elo_history')
-    .select('player_id, elo_value')
-    .eq('recorded_at', yesterdayStr);
-
-  // Mapăm datele pentru a calcula diferența de Elo live
-  const playersWithDiff = players?.map(player => {
-    const pastEntry = history?.find(h => h.player_id === player.id);
-    const diff = pastEntry ? player.current_elo - pastEntry.elo_value : 0;
-    return { ...player, diff };
-  });
+  const { data: players } = await supabase.from('players').select('*').order('current_elo', { ascending: false });
 
   return (
-    <div className="min-h-screen text-white pb-24 md:pb-10 selection:bg-[#F6C85E] selection:text-black">
+    <div className="min-h-screen bg-[#111] text-white">
       
-      {/* --- NAVBAR FUTURISTIC --- */}
-      <nav className="sticky top-0 z-50 bg-black/60 backdrop-blur-xl border-b border-white/10 px-4 py-3">
-        <div className="max-w-6xl mx-auto flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-tr from-[#DE9B35] to-[#F6C85E] rounded-br-2xl rotate-12 flex items-center justify-center shadow-[0_0_20px_rgba(222,155,51,0.3)]">
-              <Zap size={22} className="text-black -rotate-12 fill-black" />
+      {/* --- TOP BAR (ESL STYLE) --- */}
+      <nav className="h-16 border-b border-[#2a2a2a] bg-black flex items-center px-4 md:px-8 sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto w-full flex justify-between items-center">
+          <div className="flex items-center gap-8">
+            <div className="text-2xl font-[900] italic tracking-tighter flex items-center">
+              <span className="bg-[#ffeb00] text-black px-2 py-0.5 esl-slash mr-1">PENTA</span>
+              <span className="text-white">VERSE</span>
             </div>
-            <span className="text-2xl font-black italic tracking-tighter uppercase">
-              PENTA<span className="text-[#DE9B35] drop-shadow-[0_0_10px_rgba(222,155,53,0.5)]">VERSE</span>
-            </span>
+            <div className="hidden md:flex gap-6 text-[11px] font-bold uppercase tracking-widest text-gray-400">
+              <a href="#" className="hover:text-[#ffeb00] text-[#ffeb00]">Rankings</a>
+              <a href="#" className="hover:text-[#ffeb00]">Tournaments</a>
+              <a href="#" className="hover:text-[#ffeb00]">Community</a>
+            </div>
           </div>
-          
-          <button className="flex items-center gap-2 bg-white/5 hover:bg-[#DE9B35] hover:text-black border border-white/10 px-4 py-2 rounded-full font-bold text-xs uppercase transition-all duration-300 group">
-            <UserCheck size={16} className="group-hover:scale-110" />
-            <span className="hidden sm:inline">Claim Profile</span>
+          <button className="bg-[#ffeb00] text-black text-[10px] font-[900] uppercase px-6 py-2 skew-x-[-12deg] hover:bg-white transition-colors">
+            <span className="inline-block skew-x-[12deg]">Claim Profile</span>
           </button>
         </div>
       </nav>
 
-      <main className="max-w-6xl mx-auto px-4 pt-8">
+      <main className="max-w-7xl mx-auto px-4 md:px-8 pt-12">
         
-        {/* --- HERO STATS (MOBILE OPTIMIZED) --- */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10">
-          <div className="relative overflow-hidden bg-gradient-to-br from-[#111] to-black p-6 rounded-2xl border border-white/5 group">
-            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-              <Trophy size={80} />
+        {/* --- HERO / STICKER AREA --- */}
+        <div className="relative mb-16 overflow-hidden rounded-sm bg-[#1a1a1a] border-l-4 border-[#ffeb00] p-8 md:p-12">
+          <div className="relative z-10 max-w-2xl">
+            <div className="flex items-center gap-2 mb-4">
+              <span className="bg-[#ffeb00] text-black text-[9px] font-black px-2 py-0.5 uppercase">Season 2026</span>
+              <span className="text-gray-500 text-[9px] font-black uppercase tracking-widest">CS2 Romania</span>
             </div>
-            <p className="text-[10px] uppercase font-black text-[#DE9B35] tracking-[0.3em] mb-1">Top Player</p>
-            <h3 className="text-2xl font-black italic uppercase truncate">{playersWithDiff?.[0]?.nickname || '---'}</h3>
-            <p className="text-xs text-gray-500 font-bold mt-1">ELO: {playersWithDiff?.[0]?.current_elo || 0}</p>
+            <h1 className="text-5xl md:text-7xl font-[900] uppercase italic leading-[0.9] mb-6">
+              The Path to <br /> 
+              <span className="text-[#ffeb00]">Penta Mastery</span>
+            </h1>
+            <p className="text-gray-400 text-sm md:text-base mb-8 max-w-md font-medium">
+              Monitorizează evoluția celor mai buni jucători de CS2 din România. Date extrase în timp real din Faceit Pro League.
+            </p>
           </div>
-
-          <div className="hidden md:flex flex-col justify-center bg-white/5 p-6 rounded-2xl border border-white/5">
-            <p className="text-[10px] uppercase font-black text-gray-500 tracking-[0.3em] mb-1">Region</p>
-            <h3 className="text-xl font-black italic uppercase flex items-center gap-2">
-              Romania <span className="text-xs bg-white/10 px-2 py-0.5 rounded italic">EU Central</span>
-            </h3>
-          </div>
-
-          <div className="bg-white/5 p-6 rounded-2xl border border-white/5 flex flex-col justify-center">
-            <p className="text-[10px] uppercase font-black text-gray-500 tracking-[0.3em] mb-1">Active Tracked</p>
-            <h3 className="text-xl font-black italic uppercase">{playersWithDiff?.length || 0} PROS</h3>
-          </div>
+          <div className="absolute top-0 right-0 w-1/2 h-full bg-[#222] skew-x-[-20deg] translate-x-20 hidden lg:block opacity-50"></div>
         </div>
 
-        {/* --- LEADERBOARD TABLE --- */}
-        <div className="bg-[#0A0A0A]/80 backdrop-blur-sm rounded-3xl border border-white/5 overflow-hidden shadow-2xl">
-          <div className="p-6 border-b border-white/5 flex justify-between items-center bg-white/[0.02]">
-            <h2 className="flex items-center gap-3 font-black uppercase tracking-tight italic text-lg">
-              <Target size={24} className="text-[#DE9B35]" /> 
-              Leaderboard <span className="text-[#DE9B35]">Premier</span>
-            </h2>
-            <div className="flex items-center gap-2">
-               <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-              </span>
-              <span className="text-[10px] font-black text-gray-500 tracking-widest uppercase">Live Sync</span>
+        {/* --- LEADERBOARD SECTION --- */}
+        <section className="mb-20">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
+            <div>
+              <h2 className="text-2xl font-[900] uppercase italic flex items-center gap-3">
+                <span className="w-8 h-1 bg-[#ffeb00]"></span> National Rankings
+              </h2>
+            </div>
+            <div className="flex gap-2">
+              <button className="p-2 bg-[#2a2a2a] hover:bg-[#ffeb00] hover:text-black transition-all">
+                <Share2 size={16} />
+              </button>
+              <button className="p-2 bg-[#2a2a2a] hover:bg-[#ffeb00] hover:text-black transition-all text-[10px] font-bold uppercase px-4 flex items-center gap-2">
+                <Info size={14} /> Rules
+              </button>
             </div>
           </div>
 
-          <div className="overflow-x-auto">
+          <div className="esl-card overflow-hidden">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="text-[10px] uppercase text-gray-500 font-black bg-white/[0.01]">
-                  <th className="p-5 text-center w-16">Rank</th>
-                  <th className="p-5">Player</th>
-                  <th className="p-5 text-center">Elo</th>
-                  <th className="p-5 text-center hidden sm:table-cell">24h Change</th>
-                  <th className="p-5 text-right">Alert</th>
+                <tr className="text-[10px] uppercase text-gray-500 font-black border-b border-[#2a2a2a] bg-[#1a1a1a]">
+                  <th className="p-5 w-20 text-center">#</th>
+                  <th className="p-5">Player Name</th>
+                  <th className="p-5 text-center">Faceit Elo</th>
+                  <th className="p-5 text-center hidden md:table-cell">24H Status</th>
+                  <th className="p-5 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/[0.03]">
-                {playersWithDiff?.map((player, index) => (
-                  <tr key={player.id} className="hover:bg-[#DE9B35]/5 transition-all duration-200 group">
+              <tbody className="divide-y divide-[#2a2a2a]">
+                {players?.map((player, index) => (
+                  <tr key={player.id} className="hover:bg-white/[0.02] transition-colors group">
                     <td className="p-5 text-center">
-                      <span className={`font-mono text-sm font-black italic ${index === 0 ? 'text-[#F6C85E]' : 'text-gray-600'}`}>
+                      <span className={`text-sm font-[900] italic ${index < 3 ? 'text-[#ffeb00]' : 'text-gray-600'}`}>
                         {(index + 1).toString().padStart(2, '0')}
                       </span>
                     </td>
                     <td className="p-5">
                       <div className="flex items-center gap-4">
-                        <div className="relative shrink-0">
-                          <img 
-                            src={player.avatar_url || 'https://via.placeholder.com/100'} 
-                            className="w-10 h-10 rounded-xl border border-white/10 object-cover" 
-                            alt={player.nickname} 
-                          />
-                          {player.is_verified && (
-                            <div className="absolute -top-1 -right-1 bg-[#DE9B35] text-black rounded-full p-0.5 shadow-lg">
-                              <ShieldCheck size={12} strokeWidth={3} />
-                            </div>
-                          )}
-                        </div>
+                        <img src={player.avatar_url || '/default-avatar.png'} className="w-10 h-10 border border-[#2a2a2a]" />
                         <div>
-                          <p className={`font-black uppercase tracking-tight leading-none text-sm md:text-base ${player.is_verified ? 'text-[#DE9B35]' : 'text-white'}`}>
+                          <p className="font-[900] uppercase italic tracking-tighter text-base group-hover:text-[#ffeb00] transition-colors">
                             {player.nickname}
                           </p>
-                          <p className="text-[9px] text-gray-600 font-black uppercase mt-1 tracking-widest hidden md:block">
-                            {player.is_verified ? 'Pentaverse Verified' : 'Community Member'}
-                          </p>
+                          <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest">PRO DIVISION</p>
                         </div>
                       </div>
                     </td>
                     <td className="p-5 text-center">
-                      <div className="inline-block px-3 py-1 bg-white/5 rounded-lg border border-white/5 font-mono font-black text-[#F6C85E] shadow-inner">
-                        {player.current_elo}
-                      </div>
+                      <span className="font-mono font-black text-white text-lg">{player.current_elo}</span>
                     </td>
-                    <td className="p-5 text-center hidden sm:table-cell">
-                      <div className={`flex items-center justify-center gap-1 font-black text-xs ${player.diff > 0 ? 'text-green-400' : player.diff < 0 ? 'text-red-500' : 'text-gray-700'}`}>
-                        {player.diff > 0 ? <TrendingUp size={14} /> : player.diff < 0 ? <TrendingDown size={14} /> : null}
-                        {player.diff === 0 ? '---' : player.diff > 0 ? `+${player.diff}` : player.diff}
+                    <td className="p-5 text-center hidden md:table-cell">
+                      <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-black rounded-full border border-[#2a2a2a]">
+                        <TrendingUp size={12} className="text-green-500" />
+                        <span className="text-[10px] font-black text-white">+12</span>
                       </div>
                     </td>
                     <td className="p-5 text-right">
-                      <button className="p-2.5 bg-white/5 hover:bg-[#DE9B35]/20 rounded-xl transition-all border border-transparent hover:border-[#DE9B35]/30 group">
-                        <Bell size={18} className="text-gray-500 group-hover:text-[#F6C85E] group-hover:scale-110" />
+                      <button className="text-gray-500 hover:text-[#ffeb00] transition-colors p-2">
+                        <Bell size={20} />
                       </button>
                     </td>
                   </tr>
@@ -169,25 +116,20 @@ export default async function HomePage() {
               </tbody>
             </table>
           </div>
-        </div>
+        </section>
       </main>
 
-      {/* --- MOBILE BOTTOM NAV --- */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-black/80 backdrop-blur-2xl border-t border-white/10 p-4 flex justify-around items-center z-[60]">
-         <div className="flex flex-col items-center gap-1 text-[#DE9B35]">
-           <Target size={20} className="drop-shadow-[0_0_8px_rgba(222,155,53,0.5)]" />
-           <span className="text-[8px] uppercase font-black tracking-widest">Rank</span>
-         </div>
-         <div className="flex flex-col items-center gap-1 text-gray-500 hover:text-white transition-colors">
-           <Zap size={20} />
-           <span className="text-[8px] uppercase font-black tracking-widest">Live</span>
-         </div>
-         <div className="flex flex-col items-center gap-1 text-gray-500 hover:text-white transition-colors">
-           <Trophy size={20} />
-           <span className="text-[8px] uppercase font-black tracking-widest">Cups</span>
-         </div>
-      </div>
-
+      {/* --- FOOTER (ESL STYLE) --- */}
+      <footer className="bg-black border-t border-[#2a2a2a] py-12 px-8">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
+          <div className="text-xl font-black italic opacity-50">
+            PENTA<span className="text-[#ffeb00]">VERSE</span>
+          </div>
+          <p className="text-[10px] font-bold text-gray-600 uppercase tracking-[0.4em]">
+            Parteneriat Comunitate CS2 România &copy; 2026
+          </p>
+        </div>
+      </footer>
     </div>
   );
 }
