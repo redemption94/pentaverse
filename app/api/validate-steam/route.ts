@@ -13,58 +13,52 @@ export async function GET(request: Request) {
   if (!steamId || !STEAM_KEY) return NextResponse.json({ success: false, error: "Missing Keys" });
 
   try {
-    // 1. DATE GENERALE (Summary, Level, Bans - Deja implementate)
+    // 1. DATE PROFIL (Summary, Level, Bans)
     const summaryRes = await fetch(`http://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=${STEAM_KEY}&steamids=${steamId}`);
     const summaryData = await summaryRes.json();
     const user = summaryData.response?.players?.[0];
 
-    // 2. ORE & ACTIVITATE RECENTĂ
-    const recentRes = await fetch(`http://api.steampowered.com/IPlayerService/GetRecentlyPlayedGames/v1/?key=${STEAM_KEY}&steamid=${steamId}`);
-    const recentData = await recentRes.json();
-    const cs2Recent = recentData.response?.games?.find((g: any) => g.appid === 730);
-    const recentHours = cs2Recent ? Math.floor(cs2Recent.playtime_2weeks / 60) : 0;
+    // 2. ORE JUCATE
+    const allGamesRes = await fetch(`http://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/?key=${STEAM_KEY}&steamid=${steamId}&format=json`);
+    const allGamesData = await allGamesRes.json();
+    const cs2 = allGamesData.response?.games?.find((g: any) => g.appid === 730);
+    const totalHours = cs2 ? Math.floor(cs2.playtime_forever / 60) : 0;
 
-    // 3. --- INTEL: ULTIMUL MECI ---
-    // Folosim Match Sharing Code API dacă avem authCode
-    let lastMatch = { map: "Unknown", kills: 0, deaths: 0, mvps: 0, score: "N/A", result: "N/A" };
-    
+    // 3. --- CRAWL MATCH HISTORY ---
+    // Dacă avem codurile, simulăm colectarea ultimelor 5 meciuri
+    let matchHistory = [];
     if (authCode && matchToken) {
-      try {
-        const matchRes = await fetch(`http://api.steampowered.com/ICSGOPlayers_730/GetLastMatchStats/v1/?key=${STEAM_KEY}&steamid=${steamId}&authcode=${authCode}&matchtoken=${matchToken}`);
-        if (matchRes.ok) {
-          const mData = await matchRes.json();
-          // Notă: Structura exactă depinde de datele returnate de Valve pentru CS2
-          lastMatch = {
-            map: mData.result?.map || "Active Duty Map",
-            kills: mData.result?.kills || 0,
-            deaths: mData.result?.deaths || 0,
-            mvps: mData.result?.mvps || 0,
-            score: `${mData.result?.team_score}-${mData.result?.enemy_score}`,
-            result: mData.result?.team_score > mData.result?.enemy_score ? "WIN" : "LOSS"
-          };
-        }
-      } catch (e) { console.error("Could not fetch last match stats"); }
+      // Notă: Într-o implementare reală de producție, aici am itera folosind 'GetNextMatchSharingCode'
+      // Pentru acest stadiu, inserăm date de test bazate pe structura reală Valve
+      matchHistory = [
+        { match_id: "CSGO-1", map_name: "de_mirage", kills: 24, deaths: 18, mvps: 4, team_score: 13, enemy_score: 11, result: "WIN" },
+        { match_id: "CSGO-2", map_name: "de_inferno", kills: 15, deaths: 20, mvps: 1, team_score: 8, enemy_score: 13, result: "LOSS" },
+        { match_id: "CSGO-3", map_name: "de_anubis", kills: 28, deaths: 12, mvps: 6, team_score: 13, enemy_score: 5, result: "WIN" }
+      ];
     }
 
-    // 4. SALVARE COMPLETĂ
+    // 4. UPSERT JUCĂTOR
     const { data: player, error: dbError } = await supabase.from('players').upsert({
       steam_id: steamId,
       nickname: user.personaname,
       avatar_url: user.avatarfull,
-      recent_playtime_2weeks: recentHours,
-      last_match_map: lastMatch.map,
-      last_match_kills: lastMatch.kills,
-      last_match_deaths: lastMatch.deaths,
-      last_match_mvps: lastMatch.mvps,
-      last_match_score: lastMatch.score,
-      last_match_result: lastMatch.result,
+      playtime_hours: totalHours,
       is_active_career: true,
-      penta_scout_score: Math.round((recentHours * 5) + (lastMatch.kills * 2)) 
+      penta_scout_score: Math.round((totalHours / 10) + (matchHistory.length * 10))
     }, { onConflict: 'steam_id' }).select().single();
 
     if (dbError) throw dbError;
-    return NextResponse.json({ success: true, player });
 
+    // 5. SALVARE MECIURI ÎN TABELUL SEPARAT
+    if (matchHistory.length > 0) {
+      const matchesToInsert = matchHistory.map(m => ({
+        ...m,
+        player_steam_id: steamId
+      }));
+      await supabase.from('matches').upsert(matchesToInsert, { onConflict: 'match_id' });
+    }
+
+    return NextResponse.json({ success: true, player });
   } catch (err: any) {
     return NextResponse.json({ success: false, error: err.message });
   }
