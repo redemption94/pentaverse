@@ -4,18 +4,17 @@ import axios from "axios";
 import bz2 from "unbzip2-stream";
 
 /**
- * Parser pentru demo-uri CS2
- * Extrage harta, kills și deaths dintr-un link de download Valve
+ * Parser pentru demo-uri CS2 reparat pentru TypeScript
  */
 export async function parseCS2Demo(url: string, targetSteamId: string): Promise<any> {
   return new Promise(async (resolve, reject) => {
     try {
-      // 1. Descărcăm demo-ul ca stream
+      // 1. Descărcăm demo-ul
       const response = await axios({
         method: "get",
         url: url,
         responseType: "stream",
-        timeout: 30000 // Timeout după 30 secunde
+        timeout: 45000 // Mărim timpul la 45 secunde pentru fișiere mari
       });
 
       const demoFile = new DemoFile();
@@ -26,12 +25,17 @@ export async function parseCS2Demo(url: string, targetSteamId: string): Promise<
         score: { team: 0, enemy: 0 }
       };
 
-      // 2. Citim Header-ul (Harta)
+      // 2. Extragem harta din header
       demoFile.on("start", () => {
         stats.map = demoFile.header.mapName;
       });
 
-      // 3. Monitorizăm evenimentele de kill
+      // 3. Gestionăm erorile specifice parserului
+      demoFile.on("error", (error) => {
+        reject(`Parser Error: ${error}`);
+      });
+
+      // 4. Numărăm kill-urile
       demoFile.gameEvents.on("player_death", (e) => {
         const victim = demoFile.entities.getByUserId(e.userid);
         const attacker = demoFile.entities.getByUserId(e.attacker);
@@ -44,20 +48,16 @@ export async function parseCS2Demo(url: string, targetSteamId: string): Promise<
         }
       });
 
-      // 4. Finalizare și returnare date
+      // 5. Finalizare - am eliminat referința la demoFile.error care dădea eroarea
       demoFile.on("end", () => {
-        if (demoFile.error) {
-          reject("Eroare la parsarea fișierului.");
-        } else {
-          resolve(stats);
-        }
+        resolve(stats);
       });
 
-      // Procesăm stream-ul decomprimat prin BZ2
+      // Pornim procesarea
       response.data.pipe(bz2()).pipe(demoFile);
 
     } catch (error: any) {
-      reject(`Download Error: ${error.message}`);
+      reject(`Download/System Error: ${error.message}`);
     }
   });
 }
