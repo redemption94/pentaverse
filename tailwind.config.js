@@ -1,16 +1,28 @@
-// tailwind.config.js
+/** @type {import('tailwindcss').Config} */
 module.exports = {
+  // 1. Spunem Tailwind unde să caute clasele de design
+  content: [
+    "./app/**/*.{js,ts,jsx,tsx,mdx}",
+    "./components/**/*.{js,ts,jsx,tsx,mdx}",
+    "./pages/**/*.{js,ts,jsx,tsx,mdx}",
+  ],
   theme: {
     extend: {
+      // 2. Definim culorile oficiale pentru a le folosi ușor în cod
       colors: {
         penta: {
-          black: '#000000',
-          dark: '#0A0A0A',
-          yellow: '#F6C85E', // Galbenul strălucitor
-          gold: '#DE9B35',   // Aurul închis
-          border: '#1A1A1A'
-        }
-      }
-    }
-  }
-}
+          yellow: "#ffeb00", // Galbenul ESL
+          black: "#080808",
+          dark: "#111111",
+          border: "#1a1a1a",
+          gray: "#666666",
+        },
+      },
+      // 3. Adăugăm fontul pentru un aspect mai profesional
+      fontFamily: {
+        sans: ['Inter', 'sans-serif'],
+      },
+    },
+  },
+  plugins: [],
+};
