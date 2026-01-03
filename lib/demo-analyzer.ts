@@ -1,6 +1,7 @@
 import { DemoFile } from "demofile";
 import axios from "axios";
-const bz2 = require("unbzip2-stream");
+// @ts-ignore
+import bz2 from "unbzip2-stream";
 
 /**
  * Parser pentru demo-uri CS2
