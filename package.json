@@ -18,7 +18,7 @@
     "postcss": "^8.4.31",
     "autoprefixer": "^10.4.16",
     "framer-motion": "latest",
-    "demofile": "^3.0.0",
+    "demofile": "latest",
     "axios": "^1.7.9",
     "unbzip2-stream": "^1.4.3"
   },
